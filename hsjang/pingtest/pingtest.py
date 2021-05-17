@@ -36,6 +36,50 @@ error_str = r'.*(\d+) errors'
 packet_loss_and_time_str = r'.*(\d+).* packet loss, time (\d+)'
 
 
+def compare_result(ping_result):
+
+    parse_result = True
+    tx_count = 0
+    rx_count = 0
+    err_count = 0
+    packet_loss = 0
+    run_time = 0
+    
+    # check result
+    cmd_result_list = [i for i in re.split(r'[\r\n]', ping_result) if i.strip()]
+    check_string = ' '.join(cmd_result_list[-6:])
+
+    # tx / rx
+    match_obj = re.match(tx_rx_str, check_string)
+    if match_obj:            
+        tx_count = int(match_obj.group(1))
+        rx_count = int(match_obj.group(2))
+    else:
+        parse_result = False
+
+    if parse_result:
+        # error
+        match_obj = re.match(error_str, check_string)
+        if match_obj:
+            err_count = int(match_obj.group(1))
+        else:
+            err_count = 0
+
+    if parse_result:
+        # packet loss, run time
+        match_obj = re.match(packet_loss_and_time_str, check_string)
+        if match_obj:            
+            packet_loss = int(match_obj.group(1))
+            run_time = int(match_obj.group(2))
+        else:
+            parse_result = False
+
+    # test result for 1 test-case
+    print('tx_count = {0}, rx_count = {1}, err_count = {2}, packet_loss = {3} %%, run_time = {4} ms'.format(tx_count, rx_count, err_count, packet_loss, run_time))
+
+    return tx_count, rx_count, err_count, packet_loss, run_time, parse_result    
+
+
 if __name__ == "__main__":
 
     argmnts = sys.argv[1:]
@@ -68,39 +112,9 @@ if __name__ == "__main__":
         print('result ================================')
         print('{0}'.format(ping_result))
         print('=======================================')
-        
-        # check result
-        cmd_result_list = [i for i in re.split(r'[\r\n]', ping_result) if i.strip()]
-        check_string = ' '.join(cmd_result_list[-6:])
-        # print('check_string {0}'.format(check_string))
 
-        # tx / rx
-        match_obj = re.match(tx_rx_str, check_string)
-        if match_obj:            
-            tx_count = int(match_obj.group(1))
-            rx_count = int(match_obj.group(2))
-        else:
-            fail_count = fail_count + 1
-            continue
-
-        # error
-        match_obj = re.match(error_str, check_string)
-        if match_obj:
-            err_count = int(match_obj.group(1))
-        else:
-            err_count = 0
-
-        # packet loss, run time
-        match_obj = re.match(packet_loss_and_time_str, check_string)
-        if match_obj:            
-            packet_loss = int(match_obj.group(1))
-            run_time = int(match_obj.group(2))
-        else:
-            fail_count = fail_count + 1
-            continue
-
-        # test result for 1 test-case
-        print('tx_count = {0}, rx_count = {1}, err_count = {2}, packet_loss = {3} %%, run_time = {4} ms'.format(tx_count, rx_count, err_count, packet_loss, run_time))
+        # 
+        tx_count, rx_count, err_count, packet_loss, run_time, parse_result = compare_result(ping_result)
         if tx_count != pingcount or rx_count != pingcount or err_count != 0 or packet_loss != 0:
             fail_count = fail_count + 1
         else:           
